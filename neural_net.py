@@ -193,11 +193,13 @@ class Neural_Net:
                     self.backward_pass(y_batch[j])
                 self.update_weights()
 
-                #track accuracy,loss
-                accuracy, avg_loss, loss = self.check_accuracy(x_test,y_test)
-                acc_hist.append(accuracy)
-                loss_hist.append(loss)
-                avg_loss_hist.append(avg_loss)
+            #track accuracy,loss
+            accuracy, avg_loss, loss = self.check_accuracy(x_test,y_test)
+            acc_hist.append(accuracy)
+            loss_hist.append(loss)
+            avg_loss_hist.append(avg_loss)
+            
+            print("Epoch", epoch + 1, ": accuracy:", round(accuracy,2), "avg_loss:", round(avg_loss,2))
                 
         return acc_hist, loss_hist, avg_loss_hist
                 
