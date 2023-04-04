@@ -15,10 +15,11 @@ class ReLu:
         pass
     
     def func(self):
-        return np.vectorize(lambda x: max(0,x))
+        #return np.vectorize(lambda x: max(0,x))
+        return np.vectorize(lambda x: np.where(x > 0,x, 0.01*x))
     
     def derivative(self):
-        return np.vectorize(lambda x: np.where(x > 0, 1, 0))
+        return np.vectorize(lambda x: np.where(x > 0, 1, 0.01))
     
 class Softmax:
     def __init__(self):
@@ -185,10 +186,11 @@ class Neural_Net:
         loss_hist = []
         avg_loss_hist = []
         #append initial values
-        accuracy, avg_loss, loss = self.check_accuracy(x_test,y_test)
+        accuracy, avg_loss, loss, conf = self.check_accuracy(x_test,y_test)
         acc_hist.append(accuracy)
         loss_hist.append(loss)
         avg_loss_hist.append(avg_loss)
+        
         print("Initial Stats: accuracy:", round(accuracy,2), "avg_loss:", round(avg_loss,2))
         
         for epoch in range(epochs):
@@ -210,14 +212,15 @@ class Neural_Net:
                 self.update_weights()
 
             #track accuracy,loss
-            accuracy, avg_loss, loss = self.check_accuracy(x_test,y_test)
+            accuracy, avg_loss, loss, conf = self.check_accuracy(x_test,y_test)
             acc_hist.append(accuracy)
             loss_hist.append(loss)
             avg_loss_hist.append(avg_loss)
             
-            print("Epoch", epoch + 1, ": accuracy:", round(accuracy,2), "avg_loss:", round(avg_loss,2))
-                
-        return acc_hist, loss_hist, avg_loss_hist
+            
+            print("Epoch", epoch + 1, ": accuracy:", round(accuracy,4), "avg_loss:", round(avg_loss,4))
+        
+        return acc_hist, loss_hist, avg_loss_hist, conf
                 
                 
     def predict(self,x):
@@ -230,13 +233,25 @@ class Neural_Net:
         sample_count = len(y_test)
         correct = 0
         loss = []
-
+        
+        #set up confusion matrix
+        conf_size = len(y_test[0])
+        conf = np.zeros((conf_size,conf_size))
+        
+        #Get the loss, accuracy
         for i in range(0,len(x_test)):
-            model_pred = dist_map(np.argmax(self.predict(x_test[i])))
-            true_val = dist_map(np.argmax(y_test[i]))
+            model_pred = np.argmax(self.predict(x_test[i]))
+            true_val = np.argmax(y_test[i])
             if model_pred == true_val:
                 correct += 1
             loss.append(self.loss_func(self.predict(x_test[i]),y_test[i]))
+            
+            #update confusion matrix (true label on rows, pred label cols)
+            conf[true_val][model_pred] += 1
+            
         avg_loss = np.array(loss).mean()
-        return (correct/sample_count,avg_loss,loss)
+        
+        return (correct/sample_count,avg_loss,loss,conf)
+    
+    
     
