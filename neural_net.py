@@ -1,14 +1,3 @@
-def dist_map(dist_id):
-    dist_mapping = {
-        0:"Normal",
-        1:"Exponential",
-        2:"Poisson",
-        3:"Uniform",
-        4:"Beta",
-        5:"Gamma"
-    }
-    return dist_mapping[dist_id]
-
 import numpy as np
 class ReLu:
     def __init__(self):
