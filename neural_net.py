@@ -171,14 +171,30 @@ class Neural_Net:
             # update weights and biases
             self.layers[i].weights -= self.learning_rate * grad_w
             self.layers[i].bias -= self.learning_rate * grad_b
+            
+        #shuffles data for training
+    def shuffle(self,x,y):
+        #combine such that shuffle preserves mapping of labels to data
+        combined = np.concatenate((x,y),axis=1)
+        combined = np.random.permutation(combined)
+        split = np.split(combined,2,axis=1)
+        return split[0],split[1]
 
     def train(self, x_train, y_train, x_test, y_test, epochs, batch_size):
         acc_hist = []
         loss_hist = []
         avg_loss_hist = []
+        #append initial values
+        accuracy, avg_loss, loss = self.check_accuracy(x_test,y_test)
+        acc_hist.append(accuracy)
+        loss_hist.append(loss)
+        avg_loss_hist.append(avg_loss)
+        print("Initial Stats: accuracy:", round(accuracy,2), "avg_loss:", round(avg_loss,2))
+        
         for epoch in range(epochs):
-            # shuffle data TODO
-            #x_train, y_train = np.shuffle(x_train, y_train)
+            
+            # shuffle data
+            x_train, y_train = self.shuffle(x_train, y_train)
             
             # loop over batches
             for i in range(0, len(x_train), batch_size):
