@@ -15,7 +15,8 @@ class Softmax:
         pass
     
     def func(self):
-        return lambda x: np.exp(x - np.max(x))/(np.exp(x - np.max(x)).sum())
+        #subtract off max such that it avoids overflow
+        return lambda x: np.exp(x - np.max(x))/((np.exp(x - np.max(x)).sum()))
         #return lambda x: np.exp(x)/(np.exp(x).sum())
     
     def derivative(self):
@@ -47,14 +48,11 @@ class OutputLayer:
         self.error = None
         self.act = act #(lambda x: np.exp(x)/np.exp(x).sum()) #softmax
 
-#categorical crossentropy assuming that softmax has already been applied
-#prob = np.array([10e-100000])
-#result = np.where(prob > 0, prob, -np.exp(1))
-#np.log(result, out=result, where=result > 0)
-
+# assumes softmax has been applied
 def categorical_crossentropy(y_predicted,y_true):
     #get rid of log 0
     y_predicted = np.where(y_predicted > 0, y_predicted, -np.exp(1))
+    #print(y_true*np.log(y_predicted,out=y_predicted, where=y_predicted > 0))
     return -np.sum(y_true*np.log(y_predicted,out=y_predicted, where=y_predicted > 0))/y_true.shape[0]
 
 #Neural network class def: (for classification problems as of now)
@@ -74,12 +72,14 @@ class Neural_Net:
             print("Neurons:", self.layers[i].neurons)
             print("Weights:",self.layers[i].weights)
             print("Biases:",self.layers[i].bias)
+            print("Error:",self.layers[i].error)
         print("Output Neurons:",self.layers[-1].neurons)
        
     def check_nan(self):
         for i in range(self.num_layers-1):
             if np.isnan(self.layers[i].weights).any():
                 print("NAN Weights Exist")
+                return
             
     def print_error(self):
         print("---- Errors: ----")
@@ -89,11 +89,20 @@ class Neural_Net:
     
     #initializes weights
     def init_weights(self):
+        
         for i in range(self.num_layers-1):
-            self.layers[i].weights = np.array(np.random.rand(self.layers[i].size,
-                                                   self.layers[i+1].size),
+            
+            #xavier initalization
+            stdev = np.sqrt(2 / (self.sizes[i] + self.sizes[i+1]))
+            
+            #self.layers[i].weights = np.array(np.random.rand(self.layers[i].size,
+            #                                       self.layers[i+1].size),
+            #                                       dtype=np.float64)
+            #self.layers[i].bias = np.random.rand(self.layers[i+1].size)
+            self.layers[i].weights = np.array(np.random.normal(0,stdev,(self.layers[i].size,
+                                                   self.layers[i+1].size)),
                                                    dtype=np.float64)
-            self.layers[i].bias = np.random.rand(self.layers[i+1].size)
+            self.layers[i].bias = np.random.normal(0,stdev,self.layers[i+1].size)
     
     #computes forward pass
     def forward_pass(self, feature):
@@ -113,16 +122,14 @@ class Neural_Net:
             else:
                 #just apply activation if last layer
                 self.layers[i].neurons = self.layers[i].act.func()(self.layers[i].neurons)
-        #print("Feature:output")
-        #print(feature)
-        #print(self.layers[-1].neurons)
                 
     #computes backward pass
     def backward_pass(self, y_true):
         
         #get derivative of loss -> specific to categorical crossentropy / softmax:
         dldy = self.layers[-1].neurons - y_true
-        dydz = self.layers[-1].neurons * (1 - self.layers[-1].neurons)
+        #dydz = self.layers[-1].neurons * (1 - self.layers[-1].neurons)
+        dydz = 1
 
         #if first error computed in batch
         if type(self.layers[-1].error) == type(None):
@@ -154,15 +161,16 @@ class Neural_Net:
                 self.layers[i].error = self.layers[i].error.mean(0)
         
         for i in range(self.num_layers - 1):
+            
             # compute gradients
-            grad_w = np.dot(self.layers[i].neurons.T, self.layers[i].error)
-            grad_b = np.sum(self.layers[i].error, axis=0, keepdims=True)
-
+            grad_w = np.outer(self.layers[i].neurons.T, self.layers[i+1].error)
+            grad_b = self.layers[i+1].error
+            
             # update weights and biases
-            self.layers[i].weights -= self.learning_rate * grad_w
+            self.layers[i].weights -= (self.learning_rate * grad_w)
             self.layers[i].bias -= self.learning_rate * grad_b
             
-        #shuffles data for training
+    #shuffles data for training
     def shuffle(self,x,y):
         #combine such that shuffle preserves mapping of labels to data
         combined = np.concatenate((x,y),axis=1)
@@ -214,7 +222,6 @@ class Neural_Net:
                 
     def predict(self,x):
         self.forward_pass(x)
-        #print(self.layers[-1].neurons)
         return(self.layers[-1].neurons)
     
     
