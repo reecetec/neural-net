@@ -128,7 +128,6 @@ class Neural_Net:
         
         #get derivative of loss -> specific to categorical crossentropy / softmax:
         dldy = self.layers[-1].neurons - y_true
-        #dydz = self.layers[-1].neurons * (1 - self.layers[-1].neurons)
         dydz = 1
 
         #if first error computed in batch
